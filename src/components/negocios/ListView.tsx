@@ -12,7 +12,8 @@ type StatusFilter = "abertos" | "ganhos" | "perdidos" | "todos";
 export function ListView({ pipelineId }: { pipelineId: string }) {
   const router = useRouter();
   const pipeline = useCrmStore((s) => s.getPipeline(pipelineId));
-  const deals = useCrmStore((s) => s.dealsByPipeline(pipelineId));
+  const allDeals = useCrmStore((s) => s.deals);
+  const deals = useMemo(() => allDeals.filter((d) => d.pipelineId === pipelineId), [allDeals, pipelineId]);
   const getCompany = useCrmStore((s) => s.getCompany);
   const users = useCrmStore((s) => s.users);
   const patchDeal = useCrmStore((s) => s.patchDeal);

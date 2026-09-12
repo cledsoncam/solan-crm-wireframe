@@ -11,7 +11,8 @@ import { Plus } from "lucide-react";
 
 export function KanbanBoard({ pipelineId, editMode }: { pipelineId: string; editMode: boolean }) {
   const pipeline = useCrmStore((s) => s.getPipeline(pipelineId));
-  const deals = useCrmStore((s) => s.dealsByPipeline(pipelineId));
+  const allDeals = useCrmStore((s) => s.deals);
+  const deals = useMemo(() => allDeals.filter((d) => d.pipelineId === pipelineId), [allDeals, pipelineId]);
   const renameStage = useCrmStore((s) => s.renameStage);
   const reorderStages = useCrmStore((s) => s.reorderStages);
   const addStage = useCrmStore((s) => s.addStage);
