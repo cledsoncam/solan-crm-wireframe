@@ -5,8 +5,10 @@ import { persist } from "zustand/middleware";
 import {
   automations as seedAutomations,
   companies as seedCompanies,
+  conversations as seedConversations,
   dealActivities as seedActivities,
   deals as seedDeals,
+  messages as seedMessages,
   people as seedPeople,
   pipelines as seedPipelines,
   timeline as seedTimeline,
@@ -17,8 +19,11 @@ import type {
   Automation,
   AutomationFlow,
   Company,
+  Conversation,
+  ConversationStatus,
   Deal,
   DealActivity,
+  Message,
   Person,
   Pipeline,
   Proposal,
@@ -39,6 +44,8 @@ interface CrmState {
   timeline: TimelineEvent[];
   activities: DealActivity[];
   automations: Automation[];
+  conversations: Conversation[];
+  messages: Message[];
 
   // derived helpers
   getPipeline: (id: string) => Pipeline | undefined;
@@ -50,6 +57,7 @@ interface CrmState {
   dealsByPipeline: (pipelineId: string) => Deal[];
   timelineForDeal: (dealId: string) => TimelineEvent[];
   activitiesForDeal: (dealId: string) => DealActivity[];
+  messagesForConversation: (conversationId: string) => Message[];
 
   // mutations
   createCompany: (data: Partial<Company> & { name: string }) => Company;
@@ -84,6 +92,11 @@ interface CrmState {
   updateAutomationFlow: (id: string, flow: AutomationFlow) => void;
   publishAutomation: (id: string) => void;
   setDealChecklistItem: (dealId: string, itemId: string, done: boolean, note?: string) => void;
+  addMessage: (message: Omit<Message, "id">) => void;
+  setConversationResponsible: (conversationId: string, userId: string) => void;
+  linkConversationPerson: (conversationId: string, personId: string, companyId?: string) => void;
+  linkConversationDeal: (conversationId: string, dealId: string) => void;
+  setConversationStatus: (conversationId: string, status: ConversationStatus) => void;
   updateDealFields: (dealId: string, fields: Record<string, string>) => void;
   patchDeal: (dealId: string, patch: Partial<Deal>) => void;
   createDraftProposal: (dealId: string) => void;
@@ -110,6 +123,8 @@ export const useCrmStore = create<CrmState>()(
       timeline: seedTimeline,
       activities: seedActivities,
       automations: seedAutomations,
+      conversations: seedConversations,
+      messages: seedMessages,
 
       getPipeline: (id) => get().pipelines.find((p) => p.id === id),
       getStage: (pipelineId, stageId) =>
@@ -128,6 +143,10 @@ export const useCrmStore = create<CrmState>()(
       activitiesForDeal: (dealId) =>
         get()
           .activities.filter((a) => a.dealId === dealId)
+          .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()),
+      messagesForConversation: (conversationId) =>
+        get()
+          .messages.filter((m) => m.conversationId === conversationId)
           .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()),
 
       createCompany: (data) => {
@@ -464,6 +483,38 @@ export const useCrmStore = create<CrmState>()(
       patchDeal: (dealId, patch) =>
         set((s) => ({ deals: s.deals.map((d) => (d.id === dealId ? { ...d, ...patch } : d)) })),
 
+      addMessage: (message) =>
+        set((s) => ({
+          messages: [...s.messages, { ...message, id: uid("msg") }],
+          conversations: s.conversations.map((c) =>
+            c.id === message.conversationId ? { ...c, lastMessageAt: message.at } : c
+          ),
+        })),
+
+      setConversationResponsible: (conversationId, userId) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === conversationId ? { ...c, responsibleId: userId, status: "atendendo" } : c
+          ),
+        })),
+
+      linkConversationPerson: (conversationId, personId, companyId) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === conversationId ? { ...c, personId, companyId: companyId ?? c.companyId } : c
+          ),
+        })),
+
+      linkConversationDeal: (conversationId, dealId) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) => (c.id === conversationId ? { ...c, dealId } : c)),
+        })),
+
+      setConversationStatus: (conversationId, status) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) => (c.id === conversationId ? { ...c, status } : c)),
+        })),
+
       createDraftProposal: (dealId) => {
         const deal = get().getDeal(dealId);
         if (!deal || deal.proposal) return;
@@ -640,6 +691,8 @@ export const useCrmStore = create<CrmState>()(
         timeline: state.timeline,
         activities: state.activities,
         automations: state.automations,
+        conversations: state.conversations,
+        messages: state.messages,
         currentUserId: state.currentUserId,
       }),
     }

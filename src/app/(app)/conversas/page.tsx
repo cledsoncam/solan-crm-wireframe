@@ -1,17 +1,23 @@
-import { ComingSoon } from "@/components/shell/ComingSoon";
+"use client";
+
+import { useState } from "react";
+import { PageShell } from "@/components/shell/PageShell";
+import { ConversationList } from "@/components/conversas/ConversationList";
+import { ChatPanel } from "@/components/conversas/ChatPanel";
+import { ContextPanel } from "@/components/conversas/ContextPanel";
+import { useCrmStore } from "@/lib/store";
 
 export default function ConversasPage() {
+  const conversations = useCrmStore((s) => s.conversations);
+  const [selectedId, setSelectedId] = useState<string | null>(conversations[0]?.id ?? null);
+
   return (
-    <ComingSoon
-      eyebrow="CONVERSAS"
-      title="Inbox omnichannel integrado ao CRM"
-      description="Caixa compartilhada de atendimento em três regiões: filas/conversas, chat e contexto de CRM — no padrão de inbox comercial."
-      bullets={[
-        "Filas: esperando, minhas conversas, não respondidas, finalizadas",
-        "Criar Lead/Negócio direto da conversa, sem sair do chat",
-        "Contato desconhecido: criar ou vincular Pessoa sem perder a conversa",
-        "Templates WhatsApp, respostas rápidas e transferência entre atendentes",
-      ]}
-    />
+    <PageShell title="CONVERSAS">
+      <div className="flex flex-1 min-h-0">
+        <ConversationList selectedId={selectedId} onSelect={setSelectedId} />
+        <ChatPanel conversationId={selectedId} />
+        <ContextPanel conversationId={selectedId} />
+      </div>
+    </PageShell>
   );
 }

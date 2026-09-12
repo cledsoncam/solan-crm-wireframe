@@ -1,8 +1,10 @@
 import type {
   Automation,
   Company,
+  Conversation,
   Deal,
   DealActivity,
+  Message,
   Person,
   Pipeline,
   TimelineEvent,
@@ -372,4 +374,52 @@ export const automations: Automation[] = [
     scopeLabel: "SDR / Entrada", pipelineId: "pl_sdr", stageId: "st_s_entrada", triggerLabel: "Negócio criado",
     status: "pausada", version: 6, execs7d: 0,
   },
+];
+
+export const conversations: Conversation[] = [
+  {
+    id: "conv_juliana", channel: "whatsapp", contactLabel: "Juliana Prado", personId: "p_juliana",
+    companyId: "c_solarvale", dealId: "d_solarvale_expansao", responsibleId: "u_cledson",
+    status: "esperando", lastMessageAt: new Date(now - 18 * 60000).toISOString(), tags: ["proposta"],
+  },
+  {
+    id: "conv_aurora", channel: "whatsapp", contactLabel: "Condomínio Aurora", companyId: "c_aurora",
+    responsibleId: "u_cledson", status: "esperando", lastMessageAt: new Date(now - 3600000).toISOString(), tags: [],
+  },
+  {
+    id: "conv_novolead", channel: "whatsapp", contactLabel: "(84) 9 9123-4477",
+    status: "esperando", lastMessageAt: new Date(now - 8 * 60000).toISOString(), tags: ["desconhecido"],
+  },
+  {
+    id: "conv_julio", channel: "whatsapp", contactLabel: "Júlio Medeiros", personId: "p_julio",
+    companyId: "c_agroboavista", dealId: "d_sdr_boavista", responsibleId: "u_iara",
+    status: "atendendo", lastMessageAt: new Date(now - 2 * 3600000).toISOString(), tags: [],
+  },
+  {
+    id: "conv_padaria", channel: "email", contactLabel: "Padaria Central", companyId: "c_padaria",
+    responsibleId: "u_bruno", status: "finalizada", lastMessageAt: daysAgo(2), tags: [],
+  },
+];
+
+export const messages: Message[] = [
+  { id: "m1", conversationId: "conv_juliana", from: "cliente", body: "Recebi a proposta revisada, vou levar pro meu sócio.", at: daysAgo(1) },
+  { id: "m2", conversationId: "conv_juliana", from: "atendente", authorName: "Cledson C.", body: "Perfeito! Fico no aguardo, qualquer dúvida me chama.", at: new Date(now - 20 * 3600000).toISOString() },
+  { id: "m3", conversationId: "conv_juliana", from: "cliente", body: "Consegue enviar a simulação de 12x?", at: new Date(now - 18 * 60000).toISOString() },
+
+  { id: "m4", conversationId: "conv_aurora", from: "cliente", body: "Boa tarde! Recebemos a proposta, vamos avaliar internamente.", at: new Date(now - 3600000).toISOString() },
+
+  { id: "m5", conversationId: "conv_novolead", from: "cliente", body: "Oi, vi o anúncio de vocês. Quanto custa uma instalação de 5kWp?", at: new Date(now - 8 * 60000).toISOString() },
+
+  { id: "m6", conversationId: "conv_julio", from: "atendente", authorName: "Iara F.", body: "Júlio, tudo certo pra reunião de amanhã às 15h?", at: new Date(now - 3 * 3600000).toISOString() },
+  { id: "m7", conversationId: "conv_julio", from: "cliente", body: "Sim! Vamos precisar reagendar pra 15h30, pode ser?", at: new Date(now - 2 * 3600000).toISOString() },
+
+  { id: "m8", conversationId: "conv_padaria", from: "atendente", authorName: "Bruno T.", body: "Segue o contrato assinado, obrigado pela parceria!", at: daysAgo(2) },
+  { id: "m9", conversationId: "conv_padaria", from: "cliente", body: "Recebido, muito obrigado!", at: daysAgo(2) },
+];
+
+export const QUICK_REPLIES = [
+  { label: "Saudação", text: "Olá! Tudo bem? Como posso ajudar hoje?" },
+  { label: "Enviar proposta", text: "Segue a proposta em anexo. Qualquer dúvida, estou à disposição!" },
+  { label: "Follow-up", text: "Oi! Passando para saber se conseguiu avaliar a proposta. Posso ajudar em algo?" },
+  { label: "Agradecimento", text: "Muito obrigado pelo seu tempo! Qualquer coisa, é só chamar." },
 ];

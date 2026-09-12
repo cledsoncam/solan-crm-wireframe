@@ -180,6 +180,32 @@ export interface AutomationFlow {
   noPath?: FlowNode[];
 }
 
+export type ConversationChannel = "whatsapp" | "email" | "webchat";
+export type ConversationStatus = "esperando" | "atendendo" | "finalizada";
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  from: "cliente" | "atendente" | "sistema";
+  authorName?: string;
+  body: string;
+  at: string;
+  kind?: "texto" | "nota" | "template";
+}
+
+export interface Conversation {
+  id: string;
+  channel: ConversationChannel;
+  contactLabel: string;
+  personId?: string;
+  companyId?: string;
+  dealId?: string;
+  responsibleId?: string;
+  status: ConversationStatus;
+  lastMessageAt: string;
+  tags: string[];
+}
+
 export interface Automation {
   id: string;
   name: string;
