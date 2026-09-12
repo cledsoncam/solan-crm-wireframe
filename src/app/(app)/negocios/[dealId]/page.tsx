@@ -78,6 +78,8 @@ function DealDetail({ dealId }: { dealId: string }) {
   const activities = activitiesForDeal(dealId);
   const openActivities = activities.filter((a) => !a.done);
   const nextActivity = openActivities[0];
+  const relatedProject = useCrmStore((s) => s.projects.find((p) => p.sourceDealId === dealId));
+  const relatedPostSale = useCrmStore((s) => s.postSales.find((p) => p.sourceDealId === dealId));
 
   const orderedStages = useMemo(() => [...pipeline.stages].sort((a, b) => a.order - b.order), [pipeline]);
   const currentIdx = orderedStages.findIndex((s) => s.id === stage.id);
@@ -437,12 +439,18 @@ function DealDetail({ dealId }: { dealId: string }) {
                 ) : (
                   <>
                     {deal.projectRef && (
-                      <Link href="/engenharia" className="border border-line-card rounded-[3px] p-2.5 text-[11px] hover:border-ink block">
+                      <Link
+                        href={relatedProject ? `/engenharia/${relatedProject.id}` : "/engenharia"}
+                        className="border border-line-card rounded-[3px] p-2.5 text-[11px] hover:border-ink block"
+                      >
                         {deal.projectRef.code} · Engenharia / {deal.projectRef.stage}
                       </Link>
                     )}
                     {deal.postSaleRef && (
-                      <Link href="/pos-venda" className="border border-line-card rounded-[3px] p-2.5 text-[11px] hover:border-ink block">
+                      <Link
+                        href={relatedPostSale ? `/pos-venda/${relatedPostSale.id}` : "/pos-venda"}
+                        className="border border-line-card rounded-[3px] p-2.5 text-[11px] hover:border-ink block"
+                      >
                         {deal.postSaleRef.code} · Pós-venda / {deal.postSaleRef.stage}
                       </Link>
                     )}

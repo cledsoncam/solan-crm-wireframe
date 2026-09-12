@@ -1,21 +1,36 @@
-import { ComingSoon } from "@/components/shell/ComingSoon";
+"use client";
+
+import { PageShell } from "@/components/shell/PageShell";
+import { ProjectBoard } from "@/components/engenharia/ProjectBoard";
+import { useCrmStore } from "@/lib/store";
+import { useUiStore } from "@/lib/ui-store";
 
 export default function EngenhariaPage() {
+  const projects = useCrmStore((s) => s.projects);
+  const pushToast = useUiStore((s) => s.pushToast);
+  const openAutomacoesDrawer = useUiStore((s) => s.openAutomacoesDrawer);
+
   return (
-    <ComingSoon
-      eyebrow="ENGENHARIA"
-      title="Projetos vendidos e execução técnica"
-      description="Módulo operacional próprio, gerado automaticamente quando um Negócio é marcado como Ganho — nunca um funil comercial."
-      bullets={[
-        "Quadro: Handoff → Visita → Projeto → Homologação → Suprimentos → Instalação → Comissionamento → Entrega",
-        "Handoff da venda somente leitura, com proposta aceita, valor final e observações comerciais",
-        "Dados técnicos, checklist com gate de avanço e pendências por responsável",
-        "Documentos com versionamento (projeto, unifilar, memorial, ART, as-built)",
-        "Homologação por distribuidora com protocolo, SLA e pendências",
-        "Visitas técnicas e Ordens de Serviço relacionadas",
-      ]}
-      backHref="/negocios"
-      backLabel="Negócios"
-    />
+    <PageShell title="ENGENHARIA">
+      <div className="flex items-center gap-2.5 h-[46px] px-4 border-b border-line flex-none bg-surface">
+        <span className="font-mono text-[9.5px] text-muted-2 tracking-wider uppercase">Engenharia</span>
+        <span className="font-mono text-[9px] text-muted-3">
+          {projects.length} PROJETOS · MÓDULO OPERACIONAL, GERADO A PARTIR DA VENDA GANHA
+        </span>
+        <button
+          onClick={() => pushToast("Filtros avançados chegam na próxima versão.")}
+          className="ml-auto border border-line-strong rounded-[3px] text-[11px] px-2.5 py-1.5 text-muted"
+        >
+          Filtros
+        </button>
+        <button
+          onClick={() => openAutomacoesDrawer({ pipelineId: "pl_engenharia", scopeLabel: "Engenharia" })}
+          className="border border-line-strong rounded-[3px] text-[11px] px-2.5 py-1.5"
+        >
+          Automações
+        </button>
+      </div>
+      <ProjectBoard />
+    </PageShell>
   );
 }

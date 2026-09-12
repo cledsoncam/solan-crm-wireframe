@@ -7,6 +7,8 @@ import type {
   Message,
   Person,
   Pipeline,
+  PostSale,
+  Project,
   TimelineEvent,
   User,
 } from "./types";
@@ -127,6 +129,50 @@ export const pipelines: Pipeline[] = [
     ],
   },
   {
+    id: "pl_engenharia",
+    name: "Engenharia",
+    kind: "engenharia",
+    stages: [
+      { id: "st_e_handoff", name: "Handoff", type: "aberta", order: 0 },
+      { id: "st_e_visita", name: "Levantamento / Visita", type: "aberta", order: 1 },
+      {
+        id: "st_e_projeto",
+        name: "Projeto",
+        type: "aberta",
+        order: 2,
+        checklist: [
+          { id: "cl1", label: "Dados técnicos completos", kind: "obrigatorio" },
+          { id: "cl2", label: "Layout aprovado", kind: "obrigatorio" },
+          { id: "cl3", label: "Memorial descritivo", kind: "alerta" },
+        ],
+      },
+      {
+        id: "st_e_homologacao",
+        name: "Homologação",
+        type: "aberta",
+        order: 3,
+        checklist: [{ id: "cl1", label: "Protocolo enviado", kind: "obrigatorio" }],
+      },
+      { id: "st_e_suprimentos", name: "Suprimentos", type: "aberta", order: 4 },
+      { id: "st_e_instalacao", name: "Instalação", type: "aberta", order: 5 },
+      { id: "st_e_comissionamento", name: "Comissionamento", type: "aberta", order: 6 },
+      { id: "st_e_entrega", name: "Entrega", type: "aberta", order: 7 },
+    ],
+  },
+  {
+    id: "pl_posvenda",
+    name: "Pós-venda",
+    kind: "posvenda",
+    stages: [
+      { id: "st_p_recebida", name: "Venda recebida", type: "aberta", order: 0 },
+      { id: "st_p_implantacao", name: "Acompanhando implantação", type: "aberta", order: 1 },
+      { id: "st_p_preparar", name: "Preparar onboarding", type: "aberta", order: 2 },
+      { id: "st_p_onboarding", name: "Onboarding", type: "aberta", order: 3 },
+      { id: "st_p_inicial", name: "Acompanhamento inicial", type: "aberta", order: 4 },
+      { id: "st_p_ativa", name: "Carteira ativa", type: "aberta", order: 5 },
+    ],
+  },
+  {
     id: "pl_parcerias",
     name: "Funil de Parcerias",
     kind: "parcerias",
@@ -199,7 +245,7 @@ export const deals: Deal[] = [
     id: "d_padaria_ganho", code: "NEG #1019", title: "Padaria Central", pipelineId: "pl_vendas", stageId: "st_v_ganho",
     companyId: "c_padaria", personId: undefined, otherPersonIds: [], value: 64200, responsibleId: "u_bruno",
     enteredStageAt: daysAgo(7), tags: [], risk: "baixo", fields: {}, wonAt: daysAgo(7),
-    projectRef: { code: "PRJ 549", stage: "Projeto" }, createdAt: daysAgo(50),
+    projectRef: { code: "PRJ 549", stage: "Projeto" }, postSaleRef: { code: "PS 890", stage: "Venda recebida" }, createdAt: daysAgo(50),
   },
   {
     id: "d_mercadosul_perdido", code: "NEG #1002", title: "Mercado Sul", pipelineId: "pl_vendas", stageId: "st_v_perdido",
@@ -415,6 +461,55 @@ export const messages: Message[] = [
 
   { id: "m8", conversationId: "conv_padaria", from: "atendente", authorName: "Bruno T.", body: "Segue o contrato assinado, obrigado pela parceria!", at: daysAgo(2) },
   { id: "m9", conversationId: "conv_padaria", from: "cliente", body: "Recebido, muito obrigado!", at: daysAgo(2) },
+];
+
+export const projects: Project[] = [
+  {
+    id: "prj_554", code: "PRJ 554", name: "Solar Vale · expansão 96 kWp", pipelineId: "pl_engenharia", stageId: "st_e_homologacao",
+    sourceDealId: "d_solarvale_ganho", companyId: "c_solarvale", personId: "p_marcos", postSaleId: "ps_887",
+    responsibleId: "u_paulo", city: "Parnamirim", uf: "RN", power: "96 kWp", priority: "alta",
+    dueDate: daysAhead(25), enteredStageAt: daysAgo(3), createdAt: daysAgo(2),
+    fields: {
+      "Módulos": "160x Canadian 600W", "Inversores": "2x Growatt 50kW", "Estrutura": "Metálica",
+      "Tipo de telhado": "Metálico", "Tipo de ligação": "Trifásico", "Tensão": "380V",
+      "Distribuidora": "Neoenergia", "Unidade consumidora": "UC 88123456",
+    },
+    checklistState: { cl1: true, cl2: true },
+    homologacao: {
+      distribuidora: "Neoenergia", protocolo: "NE-2026-88213", status: "em_analise",
+      dataEnvio: daysAgo(9), prazo: daysAhead(21), responsibleId: "u_paulo",
+      pendencias: [],
+    },
+    documents: [
+      { id: "doc1", name: "Projeto_executivo_v2.pdf", category: "projeto", version: 2, responsibleId: "u_paulo", at: daysAgo(5) },
+      { id: "doc2", name: "ART_554.pdf", category: "projeto", version: 1, responsibleId: "u_paulo", at: daysAgo(6) },
+      { id: "doc3", name: "Conta_energia_solarvale.pdf", category: "cliente", version: 1, at: daysAgo(10) },
+    ],
+  },
+  {
+    id: "prj_549", code: "PRJ 549", name: "Padaria Central", pipelineId: "pl_engenharia", stageId: "st_e_projeto",
+    sourceDealId: "d_padaria_ganho", companyId: "c_padaria", responsibleId: "u_paulo",
+    city: "Natal", uf: "RN", power: "18 kWp", priority: "media",
+    dueDate: daysAhead(40), enteredStageAt: daysAgo(5), createdAt: daysAgo(7),
+    fields: { "Tipo de telhado": "Fibrocimento", "Distribuidora": "Neoenergia" },
+    checklistState: {},
+    homologacao: { distribuidora: "Neoenergia", status: "preparacao", pendencias: [] },
+    documents: [],
+  },
+];
+
+export const postSales: PostSale[] = [
+  {
+    id: "ps_887", code: "PS 887", sourceDealId: "d_solarvale_ganho", projectId: "prj_554",
+    pipelineId: "pl_posvenda", stageId: "st_p_onboarding", companyId: "c_solarvale", personId: "p_marcos",
+    responsibleId: "u_claudia", saleDate: daysAgo(3), enteredStageAt: daysAgo(1), createdAt: daysAgo(2),
+    nextActivityAt: daysAhead(2),
+  },
+  {
+    id: "ps_890", code: "PS 890", sourceDealId: "d_padaria_ganho", projectId: "prj_549",
+    pipelineId: "pl_posvenda", stageId: "st_p_recebida", companyId: "c_padaria",
+    responsibleId: "u_claudia", saleDate: daysAgo(7), enteredStageAt: daysAgo(7), createdAt: daysAgo(7),
+  },
 ];
 
 export const QUICK_REPLIES = [

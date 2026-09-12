@@ -18,7 +18,8 @@ export function NovoNegocioModal() {
   const pushToast = useUiStore((s) => s.pushToast);
   const router = useRouter();
 
-  const pipelines = useCrmStore((s) => s.pipelines);
+  const allPipelines = useCrmStore((s) => s.pipelines);
+  const pipelines = useMemo(() => allPipelines.filter((p) => p.kind !== "engenharia" && p.kind !== "posvenda"), [allPipelines]);
   const users = useCrmStore((s) => s.users);
   const people = useCrmStore((s) => s.people);
   const companies = useCrmStore((s) => s.companies);

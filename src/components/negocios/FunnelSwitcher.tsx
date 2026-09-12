@@ -7,7 +7,8 @@ import { formatCurrency } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 
 export function FunnelSwitcher({ pipelineId, onChange }: { pipelineId: string; onChange: (id: string) => void }) {
-  const pipelines = useCrmStore((s) => s.pipelines);
+  const allPipelines = useCrmStore((s) => s.pipelines);
+  const pipelines = allPipelines.filter((p) => p.kind !== "engenharia" && p.kind !== "posvenda");
   const deals = useCrmStore((s) => s.deals);
   const pushToast = useUiStore((s) => s.pushToast);
   const current = pipelines.find((p) => p.id === pipelineId);

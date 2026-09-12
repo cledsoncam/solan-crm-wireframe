@@ -57,7 +57,7 @@ export interface Stage {
   generatesProject?: boolean;
 }
 
-export type PipelineKind = "sdr" | "vendas" | "reativacao" | "parcerias" | "custom";
+export type PipelineKind = "sdr" | "vendas" | "reativacao" | "parcerias" | "custom" | "engenharia" | "posvenda";
 
 export interface Pipeline {
   id: string;
@@ -101,7 +101,9 @@ export type DealRisk = "baixo" | "medio" | "alto";
 
 export interface TimelineEvent {
   id: string;
-  dealId: string;
+  dealId?: string;
+  projectId?: string;
+  postSaleId?: string;
   kind:
     | "nota"
     | "ligacao"
@@ -161,6 +163,88 @@ export interface Deal {
   origin?: string;
   checklistState?: Record<string, boolean>;
   checklistNotes?: Record<string, string>;
+}
+
+export type HomologStatus =
+  | "preparacao"
+  | "enviado"
+  | "em_analise"
+  | "pendencia"
+  | "reenvio"
+  | "parecer_aprovado"
+  | "vistoria"
+  | "troca_medidor"
+  | "concluido";
+
+export interface HomologPendencia {
+  id: string;
+  title: string;
+  description?: string;
+  responsibleId?: string;
+  dueDate?: string;
+  priority: "baixa" | "media" | "alta";
+  status: "aberta" | "resolvida";
+  createdAt: string;
+}
+
+export interface Homologacao {
+  distribuidora: string;
+  protocolo?: string;
+  status: HomologStatus;
+  dataEnvio?: string;
+  prazo?: string;
+  responsibleId?: string;
+  pendencias: HomologPendencia[];
+}
+
+export interface ProjectDocument {
+  id: string;
+  name: string;
+  category: "projeto" | "cliente" | "distribuidora" | "instalacao";
+  version: number;
+  responsibleId?: string;
+  at: string;
+}
+
+export interface Project {
+  id: string;
+  code: string;
+  name: string;
+  pipelineId: string;
+  stageId: string;
+  sourceDealId: string;
+  companyId?: string;
+  personId?: string;
+  postSaleId?: string;
+  responsibleId?: string;
+  city?: string;
+  uf?: string;
+  power?: string;
+  priority: "baixa" | "media" | "alta";
+  dueDate?: string;
+  enteredStageAt: string;
+  createdAt: string;
+  fields: Record<string, string>;
+  checklistState?: Record<string, boolean>;
+  homologacao: Homologacao;
+  documents: ProjectDocument[];
+  archived?: boolean;
+}
+
+export interface PostSale {
+  id: string;
+  code: string;
+  sourceDealId: string;
+  projectId?: string;
+  pipelineId: string;
+  stageId: string;
+  companyId?: string;
+  personId?: string;
+  responsibleId?: string;
+  saleDate: string;
+  enteredStageAt: string;
+  createdAt: string;
+  nextActivityAt?: string;
 }
 
 export type AutomationStatus = "rascunho" | "ativa" | "pausada" | "com_erro" | "arquivada";

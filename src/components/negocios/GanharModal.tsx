@@ -41,7 +41,8 @@ export function GanharModal() {
   const [evidenceType, setEvidenceType] = useState("Contrato físico digitalizado");
   const [justification, setJustification] = useState("");
 
-  const [createdRefs, setCreatedRefs] = useState<{ project?: string; postSale?: string }>({});
+  const projects = useCrmStore((s) => s.projects);
+  const postSales = useCrmStore((s) => s.postSales);
 
   useEffect(() => {
     if (open) {
@@ -80,11 +81,11 @@ export function GanharModal() {
       specialConditions,
       observations,
     });
-    const projSeq = 500 + Math.floor(Math.random() * 400);
-    const psSeq = 800 + Math.floor(Math.random() * 200);
-    setCreatedRefs({ project: `PRJ ${projSeq}`, postSale: `PS ${psSeq}` });
     setView("success");
   }
+
+  const createdProject = projects.find((p) => p.sourceDealId === deal.id);
+  const createdPostSale = postSales.find((p) => p.sourceDealId === deal.id);
 
   return (
     <Modal
@@ -129,7 +130,7 @@ export function GanharModal() {
             <Button
               onClick={() => {
                 close();
-                router.push("/engenharia");
+                router.push(createdProject ? `/engenharia/${createdProject.id}` : "/engenharia");
               }}
             >
               Abrir projeto
@@ -137,7 +138,7 @@ export function GanharModal() {
             <Button
               onClick={() => {
                 close();
-                router.push("/pos-venda");
+                router.push(createdPostSale ? `/pos-venda/${createdPostSale.id}` : "/pos-venda");
               }}
             >
               Abrir pós-venda
@@ -309,9 +310,9 @@ export function GanharModal() {
         <div className="flex flex-col gap-2">
           <RefRow tag="NEG" code={deal.code} label="Negócio ganho" />
           <div className="h-[14px] border-l border-line-dash ml-3" />
-          <RefRow tag="PRJ" code={createdRefs.project ?? ""} label="Projeto de Engenharia" hint={`source_deal ${deal.code}`} />
+          <RefRow tag="PRJ" code={createdProject?.code ?? deal.projectRef?.code ?? ""} label="Projeto de Engenharia" hint={`source_deal ${deal.code}`} />
           <div className="h-[14px] border-l border-line-dash ml-3" />
-          <RefRow tag="PS" code={createdRefs.postSale ?? ""} label="Pós-venda" hint={`+ ${createdRefs.project}`} />
+          <RefRow tag="PS" code={createdPostSale?.code ?? deal.postSaleRef?.code ?? ""} label="Pós-venda" hint={`+ ${createdProject?.code ?? ""}`} />
         </div>
       )}
     </Modal>

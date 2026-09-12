@@ -11,6 +11,8 @@ import {
   messages as seedMessages,
   people as seedPeople,
   pipelines as seedPipelines,
+  postSales as seedPostSales,
+  projects as seedProjects,
   timeline as seedTimeline,
   users as seedUsers,
   CURRENT_USER_ID,
@@ -23,9 +25,14 @@ import type {
   ConversationStatus,
   Deal,
   DealActivity,
+  Homologacao,
+  HomologPendencia,
   Message,
   Person,
   Pipeline,
+  PostSale,
+  Project,
+  ProjectDocument,
   Proposal,
   Stage,
   StageType,
@@ -46,6 +53,8 @@ interface CrmState {
   automations: Automation[];
   conversations: Conversation[];
   messages: Message[];
+  projects: Project[];
+  postSales: PostSale[];
 
   // derived helpers
   getPipeline: (id: string) => Pipeline | undefined;
@@ -54,10 +63,13 @@ interface CrmState {
   getCompany: (id?: string) => Company | undefined;
   getPerson: (id?: string) => Person | undefined;
   getUser: (id?: string) => User | undefined;
+  getProject: (id?: string) => Project | undefined;
+  getPostSale: (id?: string) => PostSale | undefined;
   dealsByPipeline: (pipelineId: string) => Deal[];
   timelineForDeal: (dealId: string) => TimelineEvent[];
   activitiesForDeal: (dealId: string) => DealActivity[];
   messagesForConversation: (conversationId: string) => Message[];
+  timelineForProject: (projectId: string) => TimelineEvent[];
 
   // mutations
   createCompany: (data: Partial<Company> & { name: string }) => Company;
@@ -92,6 +104,16 @@ interface CrmState {
   updateAutomationFlow: (id: string, flow: AutomationFlow) => void;
   publishAutomation: (id: string) => void;
   setDealChecklistItem: (dealId: string, itemId: string, done: boolean, note?: string) => void;
+  moveProject: (projectId: string, stageId: string) => void;
+  updateProjectFields: (projectId: string, fields: Record<string, string>) => void;
+  setProjectChecklistItem: (projectId: string, itemId: string, done: boolean) => void;
+  addProjectDocument: (projectId: string, doc: Omit<ProjectDocument, "id">) => void;
+  updateHomologacao: (projectId: string, patch: Partial<Homologacao>) => void;
+  addHomologPendencia: (projectId: string, pendencia: Omit<HomologPendencia, "id" | "createdAt" | "status">) => void;
+  resolveHomologPendencia: (projectId: string, pendenciaId: string) => void;
+  addProjectTimelineEvent: (event: Omit<TimelineEvent, "id">) => void;
+  movePostSale: (postSaleId: string, stageId: string) => void;
+  setPostSaleNextActivity: (postSaleId: string, at: string) => void;
   addMessage: (message: Omit<Message, "id">) => void;
   setConversationResponsible: (conversationId: string, userId: string) => void;
   linkConversationPerson: (conversationId: string, personId: string, companyId?: string) => void;
@@ -125,6 +147,8 @@ export const useCrmStore = create<CrmState>()(
       automations: seedAutomations,
       conversations: seedConversations,
       messages: seedMessages,
+      projects: seedProjects,
+      postSales: seedPostSales,
 
       getPipeline: (id) => get().pipelines.find((p) => p.id === id),
       getStage: (pipelineId, stageId) =>
@@ -148,6 +172,12 @@ export const useCrmStore = create<CrmState>()(
         get()
           .messages.filter((m) => m.conversationId === conversationId)
           .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()),
+      getProject: (id) => (id ? get().projects.find((p) => p.id === id) : undefined),
+      getPostSale: (id) => (id ? get().postSales.find((p) => p.id === id) : undefined),
+      timelineForProject: (projectId) =>
+        get()
+          .timeline.filter((t) => t.projectId === projectId)
+          .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()),
 
       createCompany: (data) => {
         const company: Company = {
@@ -235,8 +265,15 @@ export const useCrmStore = create<CrmState>()(
         const pipeline = get().getPipeline(deal.pipelineId);
         const wonStage = pipeline?.stages.find((s) => s.type === "ganho");
         if (!wonStage) return;
+
+        // Idempotência: reprocessar o evento de ganho não duplica Projeto/Pós-venda.
+        const alreadyHanded = !!deal.projectRef;
         const projSeq = 500 + Math.floor(Math.random() * 400);
         const psSeq = 800 + Math.floor(Math.random() * 200);
+        const shouldGenerate = wonStage.generatesProject && !alreadyHanded;
+        const projectId = shouldGenerate ? uid("prj") : undefined;
+        const postSaleId = shouldGenerate ? uid("ps") : undefined;
+
         set((s) => ({
           deals: s.deals.map((d) =>
             d.id === dealId
@@ -252,18 +289,64 @@ export const useCrmStore = create<CrmState>()(
                     "Condições especiais": opts.specialConditions ?? "",
                     "Observações para a Engenharia": opts.observations ?? "",
                   },
-                  projectRef: wonStage.generatesProject ? { code: `PRJ ${projSeq}`, stage: "Handoff" } : d.projectRef,
-                  postSaleRef: wonStage.generatesProject ? { code: `PS ${psSeq}`, stage: "Venda recebida" } : d.postSaleRef,
+                  projectRef: shouldGenerate ? { code: `PRJ ${projSeq}`, stage: "Handoff" } : d.projectRef,
+                  postSaleRef: shouldGenerate ? { code: `PS ${psSeq}`, stage: "Venda recebida" } : d.postSaleRef,
                 }
               : d
           ),
+          projects: shouldGenerate
+            ? [
+                ...s.projects,
+                {
+                  id: projectId!,
+                  code: `PRJ ${projSeq}`,
+                  name: deal.title,
+                  pipelineId: "pl_engenharia",
+                  stageId: "st_e_handoff",
+                  sourceDealId: dealId,
+                  companyId: deal.companyId,
+                  personId: deal.personId,
+                  postSaleId,
+                  power: deal.fields["Potência"],
+                  priority: "media",
+                  dueDate: opts.promisedDate,
+                  enteredStageAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                  fields: { ...deal.fields, "Condições especiais": opts.specialConditions ?? "", "Observações comerciais": opts.observations ?? "" },
+                  checklistState: {},
+                  homologacao: { distribuidora: deal.fields["Concessionária"] ?? "", status: "preparacao", pendencias: [] },
+                  documents: [],
+                },
+              ]
+            : s.projects,
+          postSales: shouldGenerate
+            ? [
+                ...s.postSales,
+                {
+                  id: postSaleId!,
+                  code: `PS ${psSeq}`,
+                  sourceDealId: dealId,
+                  projectId,
+                  pipelineId: "pl_posvenda",
+                  stageId: "st_p_recebida",
+                  companyId: deal.companyId,
+                  personId: deal.personId,
+                  responsibleId: get().currentUserId,
+                  saleDate: new Date().toISOString(),
+                  enteredStageAt: new Date().toISOString(),
+                  createdAt: new Date().toISOString(),
+                },
+              ]
+            : s.postSales,
         }));
         get().addTimelineEvent({
           dealId,
           kind: "sistema",
           title: "Negócio marcado como Ganho",
-          detail: wonStage.generatesProject
+          detail: shouldGenerate
             ? `Criado Projeto de Engenharia (PRJ ${projSeq}) e Pós-venda (PS ${psSeq})`
+            : alreadyHanded
+            ? "Reprocessado — Projeto e Pós-venda já existiam (idempotente)."
             : undefined,
           author: get().getUser(get().currentUserId)?.name,
           at: new Date().toISOString(),
@@ -483,6 +566,116 @@ export const useCrmStore = create<CrmState>()(
       patchDeal: (dealId, patch) =>
         set((s) => ({ deals: s.deals.map((d) => (d.id === dealId ? { ...d, ...patch } : d)) })),
 
+      moveProject: (projectId, stageId) => {
+        set((s) => ({
+          projects: s.projects.map((p) => (p.id === projectId ? { ...p, stageId, enteredStageAt: new Date().toISOString() } : p)),
+        }));
+        const project = get().getProject(projectId);
+        const stage = project && get().getStage(project.pipelineId, stageId);
+        get().addProjectTimelineEvent({
+          projectId,
+          kind: "etapa",
+          title: `Mudança de etapa → ${stage?.name ?? ""}`,
+          author: get().getUser(get().currentUserId)?.name,
+          at: new Date().toISOString(),
+        });
+      },
+
+      updateProjectFields: (projectId, fields) =>
+        set((s) => ({
+          projects: s.projects.map((p) => (p.id === projectId ? { ...p, fields: { ...p.fields, ...fields } } : p)),
+        })),
+
+      setProjectChecklistItem: (projectId, itemId, done) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId ? { ...p, checklistState: { ...p.checklistState, [itemId]: done } } : p
+          ),
+        })),
+
+      addProjectDocument: (projectId, doc) => {
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId ? { ...p, documents: [...p.documents, { ...doc, id: uid("doc") }] } : p
+          ),
+        }));
+        get().addProjectTimelineEvent({
+          projectId,
+          kind: "sistema",
+          title: `Documento anexado · ${doc.name}`,
+          author: get().getUser(get().currentUserId)?.name,
+          at: new Date().toISOString(),
+        });
+      },
+
+      updateHomologacao: (projectId, patch) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId ? { ...p, homologacao: { ...p.homologacao, ...patch } } : p
+          ),
+        })),
+
+      addHomologPendencia: (projectId, pendencia) => {
+        const item: HomologPendencia = {
+          ...pendencia,
+          id: uid("pnd"),
+          status: "aberta",
+          createdAt: new Date().toISOString(),
+        };
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? { ...p, homologacao: { ...p.homologacao, pendencias: [...p.homologacao.pendencias, item] } }
+              : p
+          ),
+        }));
+        get().addProjectTimelineEvent({
+          projectId,
+          kind: "sistema",
+          title: `Pendência de homologação registrada · ${item.title}`,
+          author: get().getUser(get().currentUserId)?.name,
+          at: new Date().toISOString(),
+        });
+      },
+
+      resolveHomologPendencia: (projectId, pendenciaId) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  homologacao: {
+                    ...p.homologacao,
+                    pendencias: p.homologacao.pendencias.map((pd) =>
+                      pd.id === pendenciaId ? { ...pd, status: "resolvida" } : pd
+                    ),
+                  },
+                }
+              : p
+          ),
+        })),
+
+      addProjectTimelineEvent: (event) =>
+        set((s) => ({ timeline: [...s.timeline, { ...event, id: uid("evt") }] })),
+
+      movePostSale: (postSaleId, stageId) => {
+        set((s) => ({
+          postSales: s.postSales.map((p) => (p.id === postSaleId ? { ...p, stageId, enteredStageAt: new Date().toISOString() } : p)),
+        }));
+        const postSale = get().getPostSale(postSaleId);
+        const stage = postSale && get().getStage(postSale.pipelineId, stageId);
+        get().addTimelineEvent({
+          postSaleId,
+          kind: "etapa",
+          title: `Mudança de etapa → ${stage?.name ?? ""}`,
+          author: get().getUser(get().currentUserId)?.name,
+          at: new Date().toISOString(),
+        });
+      },
+
+      setPostSaleNextActivity: (postSaleId, at) =>
+        set((s) => ({ postSales: s.postSales.map((p) => (p.id === postSaleId ? { ...p, nextActivityAt: at } : p)) })),
+
       addMessage: (message) =>
         set((s) => ({
           messages: [...s.messages, { ...message, id: uid("msg") }],
@@ -693,6 +886,8 @@ export const useCrmStore = create<CrmState>()(
         automations: state.automations,
         conversations: state.conversations,
         messages: state.messages,
+        projects: state.projects,
+        postSales: state.postSales,
         currentUserId: state.currentUserId,
       }),
     }
